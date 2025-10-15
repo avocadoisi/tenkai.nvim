@@ -4,7 +4,7 @@ local M = {}
 --
 -- ## feature
 --
--- auto triger snippets
+-- auto triger snippet
 -- triger ;
 -- target filettype: cpp
 -- target word: ^for$
@@ -42,12 +42,16 @@ local M = {}
 -- require("tenkai").create({
 --   ft = "cpp",
 --   trigger = "^%s*for;$",
---   snippets = for_index,
+--   snippet = for_index,
 -- })
 
 local M = {}
 
 -- Create a snippet trigger
+--- @param opts table Configuration options for the snippet
+--- @param opts.trigger string The trigger pattern that activates the snippet
+--- @param opts.snippet string The snippet content to be inserted
+--- @return nil
 function M.create(opts)
   if not opts then
     error("tenkai.create: opts is required")
@@ -57,8 +61,8 @@ function M.create(opts)
     error("tenkai.create: trigger pattern is required")
   end
 
-  if not opts.snippets then
-    error("tenkai.create: snippets content is required")
+  if not opts.snippet then
+    error("tenkai.create: snippet content is required")
   end
 
   -- Use "*" as default filetype when ft is omitted
@@ -100,7 +104,7 @@ function M.create(opts)
             vim.api.nvim_win_set_cursor(0, { vim.api.nvim_win_get_cursor(0)[1], match_start - 1 })
 
             -- Expand the snippet
-            vim.snippet.expand(opts.snippets)
+            vim.snippet.expand(opts.snippet)
           end
         end)
       end
