@@ -33,40 +33,44 @@ local M = {}
 -- })
 --
 -- if use this plugin
---
--- local for_index =[[
--- for (${1:int i = 0}; ${2:i < n}; ${3:++i}) {
---   ${0}
+-- require("tenkai").register({
+--   ft = { "cpp", "c" },
+--   trigger = "if;",
+--   snippet = [[
+-- if (${1:condition}) {
+--   $0
 -- }
--- ]]
--- require("tenkai").create({
---   ft = "cpp",
---   trigger = "^%s*for;$",
---   snippet = for_index,
+-- ]],
 -- })
+--
 
 local M = {}
 
 -- Create a snippet trigger
 --- @param opts table Configuration options for the snippet
+--- @param opts.ft string|table The filetype(s) for which the snippet is active
 --- @param opts.trigger string The trigger pattern that activates the snippet
 --- @param opts.snippet string The snippet content to be inserted
 --- @return nil
-function M.create(opts)
+function M.register(opts)
   if not opts then
-    error("tenkai.create: opts is required")
+    error("tenkai.register: opts is required")
   end
 
   if not opts.trigger then
-    error("tenkai.create: trigger pattern is required")
+    error("tenkai.register: trigger pattern is required")
   end
 
   if not opts.snippet then
-    error("tenkai.create: snippet content is required")
+    error("tenkai.register: snippet content is required")
   end
 
   -- Use "*" as default filetype when ft is omitted
   local ft = opts.ft or "*"
+
+  -- Get the last character of the trigger for early return optimization
+  local trigger_last_char = opts.trigger:sub(-1)
+  local trigger_length = #opts.trigger
 
   -- Handle multiple filetypes
   local pattern
@@ -92,20 +96,31 @@ function M.create(opts)
     callback = function()
       local line = vim.api.nvim_get_current_line()
       local col = vim.api.nvim_win_get_cursor(0)[2]
+
+      -- Early return if the cursor position is too short for the trigger
+      if col < trigger_length then
+        return
+      end
+
+      -- Early return if the last character doesn't match
+      if line:sub(col, col) ~= trigger_last_char then
+        return
+      end
+
       local before_cursor = line:sub(1, col)
 
-      if before_cursor:match(opts.trigger) then
+      -- Simple string matching
+      if before_cursor:sub(-trigger_length) == opts.trigger then
         vim.schedule(function()
           -- Remove the trigger text
-          local match_start = before_cursor:find(opts.trigger:gsub("%^", ""):gsub("%$", ""))
-          if match_start then
-            local new_line = line:sub(1, match_start - 1) .. line:sub(col + 1)
-            vim.api.nvim_set_current_line(new_line)
-            vim.api.nvim_win_set_cursor(0, { vim.api.nvim_win_get_cursor(0)[1], match_start - 1 })
+          local match_start = col - trigger_length + 1
+          local match_end = col
+          local new_line = line:sub(1, match_start - 1) .. line:sub(match_end + 1)
+          vim.api.nvim_set_current_line(new_line)
+          vim.api.nvim_win_set_cursor(0, { vim.api.nvim_win_get_cursor(0)[1], match_start - 1 })
 
-            -- Expand the snippet
-            vim.snippet.expand(opts.snippet)
-          end
+          -- Expand the snippet
+          vim.snippet.expand(opts.snippet)
         end)
       end
     end,
